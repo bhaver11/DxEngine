@@ -17,6 +17,7 @@
 #pragma comment( lib, "d3dcompiler.lib" ) // shader compiler
 
 #define MAX_LOADSTRING 100
+#define IDT_TIMER1 90
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -27,7 +28,7 @@ ID3D11DeviceContext* device_context_ptr = NULL;
 IDXGISwapChain* swap_chain_ptr = NULL;
 ID3D11RenderTargetView* render_target_view_ptr = NULL;
 HWND hWnd;
-
+unsigned int color_value = 0;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -44,6 +45,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Place code here.
+    SetTimer(hWnd,             // handle to main window 
+	    IDT_TIMER1,            // timer identifier
+        1000,                 // 10-second interval 
+        (TIMERPROC)NULL);     // no timer callback 
     
 
     // Initialize global strings
@@ -262,9 +267,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         
         if (msg.message == WM_QUIT)
             break;
+        if(msg.message == WM_TIMER)
+            color_value = (color_value + 1) % 256;
         /* clear the back buffer to cornflower blue for the new frame */
         float background_colour[4] = {
-          0x64 / 255.0f, 0x95 / 255.0f, 0xED / 255.0f, 1.0f };
+          color_value / 255.0f, color_value / 255.0f, color_value / 255.0f, 1.0f };
+        
+        //Pulsating backround color
+		
+       // const float c = sin(timer.Peak()) / 2.0f + 0.5f;
+
         device_context_ptr->ClearRenderTargetView(
             render_target_view_ptr, background_colour);
         
@@ -410,6 +422,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+    case WM_TIMER:
+    {
+        switch (wParam) {
+        case IDT_TIMER1:
+            color_value = (color_value + 1) % 256;
+            break;
+        }
+
+    }
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
@@ -427,14 +448,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
-    case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-            EndPaint(hWnd, &ps);
-        }
-        break;
+    //case WM_PAINT:
+    //    {
+    //        PAINTSTRUCT ps;
+    //        HDC hdc = BeginPaint(hWnd, &ps);
+    //        // TODO: Add any drawing code that uses hdc here...
+    //        EndPaint(hWnd, &ps);
+    //    }
+    //    break;
+    
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
