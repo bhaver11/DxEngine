@@ -200,7 +200,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
       { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
       
-      { "COL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+      { "COL", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
       /*
       { "NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
       { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -225,26 +225,33 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
    specify that the colour element starts on the fourth float.We can put this value, but the element structs also have a handy macro
    D3D11_APPEND_ALIGNED_ELEMENT that means "starts after the previous element" for an interleaved layout.
    */
-    typedef struct Vertex {
-        float x;
-        float y;
-        float z;
-        float r;
-        float g;
-        float b;
-    } vertex_t;
+    struct Vertex {
+        struct {
+            float x;
+            float y;
+            float z;
+        } pos;
+        struct {
+            unsigned char r;
+            unsigned char g;
+            unsigned char b;
+            unsigned char a;
+        } color;
 
-    vertex_t vertex_data_array[] = {
-        {0.0f,  0.5f,  0.0f,1.0,0.0,0.0}, // point at top
-        {0.5f, -0.5f,  0.0f,0.0,1.0,0.0}, // point at bottom-right
-        {-0.5f, -0.5f, 0.0f,0.0,0.0,1.0}, // point at bottom-left
     };
-    vertex_t vertex_data_array2[] = {
-        {0.5f,  0.5f,  0.0f,1.0,0.0,0.0}, // point at top
-        {1.0f, -0.5f,  0.0f,0.0,1.0,0.0}, // point at bottom-right
-        {0.0f, -0.5f, 0.0f,0.0,0.0,1.0}, // point at bottom-left
+
+    Vertex vertex_data_array[] = {
+        {0.0f,0.5f,0.0f,255,0,0}, // point at top
+        {0.5f,-0.5f,0.0f,0,255,255}, // point at bottom-right
+        {-0.5f,-0.5f,0.0f,0,0,255}, // point at bottom-left
     };
-    UINT vertex_stride = 6 * sizeof(float);
+    vertex_data_array[0].color = { 255,255,0,0 }; //Yellow
+    Vertex vertex_data_array2[] = {
+        {0.5f,0.5f,0.0f,255,0,0}, // point at top
+        {1.0f,-0.5f,0.0f,0,255,0}, // point at bottom-right
+        {0.0f,-0.5f,0.0f,0,0,255}, // point at bottom-left
+    };
+    UINT vertex_stride = sizeof(Vertex);
     UINT vertex_offset = 0;
     UINT vertex_count = sizeof(vertex_data_array)/(vertex_stride);
     ID3D11Buffer* vertex_buffer_ptr = NULL;
@@ -262,6 +269,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         assert(SUCCEEDED(hr));
     }
 
+    //Second triangle
     ID3D11Buffer* vertex_buffer_ptr2 = NULL;
     { /*** load mesh data into vertex buffer **/
         D3D11_BUFFER_DESC vertex_buff_descr = {};
