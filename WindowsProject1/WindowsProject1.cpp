@@ -29,6 +29,7 @@ IDXGISwapChain* swap_chain_ptr = NULL;
 ID3D11RenderTargetView* render_target_view_ptr = NULL;
 HWND hWnd;
 unsigned int color_value = 0;
+short int color_change_direction = 1;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -198,8 +199,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     ID3D11InputLayout* input_layout_ptr = NULL;
     D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
       { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-      /*
+      
       { "COL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+      /*
       { "NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
       { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
       */
@@ -223,17 +225,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
    specify that the colour element starts on the fourth float.We can put this value, but the element structs also have a handy macro
    D3D11_APPEND_ALIGNED_ELEMENT that means "starts after the previous element" for an interleaved layout.
    */
+    typedef struct Vertex {
+        float x;
+        float y;
+        float z;
+        float r;
+        float g;
+        float b;
+    } vertex_t;
 
-
-    float vertex_data_array[] = {
-   0.0f,  0.5f,  0.0f, // point at top
-   0.5f, -0.8f,  0.0f, // point at bottom-right
-  -0.5f, -0.5f,  0.0f, // point at bottom-left
+    vertex_t vertex_data_array[] = {
+        {0.0f,  0.5f,  0.0f,1.0,0.0,0.0}, // point at top
+        {0.5f, -0.5f,  0.0f,0.0,1.0,0.0}, // point at bottom-right
+        {-0.5f, -0.5f, 0.0f,0.0,0.0,1.0}, // point at bottom-left
     };
-    UINT vertex_stride = 3 * sizeof(float);
+    vertex_t vertex_data_array2[] = {
+        {0.5f,  0.5f,  0.0f,1.0,0.0,0.0}, // point at top
+        {1.0f, -0.5f,  0.0f,0.0,1.0,0.0}, // point at bottom-right
+        {0.0f, -0.5f, 0.0f,0.0,0.0,1.0}, // point at bottom-left
+    };
+    UINT vertex_stride = 6 * sizeof(float);
     UINT vertex_offset = 0;
-    UINT vertex_count = 3;
-
+    UINT vertex_count = sizeof(vertex_data_array)/(vertex_stride);
     ID3D11Buffer* vertex_buffer_ptr = NULL;
     { /*** load mesh data into vertex buffer **/
         D3D11_BUFFER_DESC vertex_buff_descr = {};
@@ -246,6 +259,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             &vertex_buff_descr,
             &sr_data,
             &vertex_buffer_ptr);
+        assert(SUCCEEDED(hr));
+    }
+
+    ID3D11Buffer* vertex_buffer_ptr2 = NULL;
+    { /*** load mesh data into vertex buffer **/
+        D3D11_BUFFER_DESC vertex_buff_descr = {};
+        vertex_buff_descr.ByteWidth = sizeof(vertex_data_array2);
+        vertex_buff_descr.Usage = D3D11_USAGE_DEFAULT;
+        vertex_buff_descr.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        D3D11_SUBRESOURCE_DATA sr_data = { 0 };
+        sr_data.pSysMem = vertex_data_array2;
+        HRESULT hr = device_ptr->CreateBuffer(
+            &vertex_buff_descr,
+            &sr_data,
+            &vertex_buffer_ptr2);
         assert(SUCCEEDED(hr));
     }
 
@@ -267,8 +295,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         
         if (msg.message == WM_QUIT)
             break;
-        if(msg.message == WM_TIMER)
-            color_value = (color_value + 1) % 256;
+        if (msg.message == WM_TIMER) {
+            if (color_value == 255) {
+                color_change_direction = -1;
+            }
+            if (color_value == 0) {
+                color_change_direction = 1;
+            }
+
+			color_value = (color_value + color_change_direction) % 256;
+        }
         /* clear the back buffer to cornflower blue for the new frame */
         float background_colour[4] = {
           color_value / 255.0f, color_value / 255.0f, color_value / 255.0f, 1.0f };
@@ -319,12 +355,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         device_context_ptr->IASetPrimitiveTopology(
             D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         device_context_ptr->IASetInputLayout(input_layout_ptr);
-        device_context_ptr->IASetVertexBuffers(
+        if(color_change_direction==1)
+            device_context_ptr->IASetVertexBuffers(
             0,
             1,
             &vertex_buffer_ptr,
             &vertex_stride,
             &vertex_offset);
+        else
+            device_context_ptr->IASetVertexBuffers(
+                0,
+                1,
+                &vertex_buffer_ptr2,
+                &vertex_stride,
+                &vertex_offset);
 
         /*Set the Shaders
         Before drawing, we also need to tell the pipeline which shaders to use next.*/
